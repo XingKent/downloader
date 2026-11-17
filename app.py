@@ -12,19 +12,19 @@ FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 PLATAFORMAS = {
     "youtube": {
         "nome": "YouTube",
-        "cor": "#E62117",
+        "cor": "#e62117",
         "regex": r"^https?://((www|m|music)\.)?(youtube\.com|youtu\.be)/.+",
         "exemplo": "https://www.youtube.com/watch?v=XXXXXXXXXXX",
     },
     "x": {
         "nome": "X (Twitter)",
-        "cor": "#1D9BF0",
+        "cor": "#1d9bf0",
         "regex": r"^https?://(www\.|mobile\.)?(twitter|x)\.com/.+",
         "exemplo": "https://x.com/usuario/status/123456789",
     },
     "instagram": {
         "nome": "Instagram",
-        "cor": "#C13584",
+        "cor": "#e1306c",
         "regex": r"^https?://(www\.)?instagram\.com/.+",
         "exemplo": "https://www.instagram.com/reel/XXXXXXXXXXX/",
     },
