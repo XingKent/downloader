@@ -10,48 +10,61 @@ import yt_dlp
 FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 
 PLATAFORMAS = {
+    "youtube": {
+        "nome": "YouTube",
+        "cor": "#E62117",
+        "regex": r"^https?://((www|m|music)\.)?(youtube\.com|youtu\.be)/.+",
+        "exemplo": "https://www.youtube.com/watch?v=XXXXXXXXXXX",
+    },
     "x": {
         "nome": "X (Twitter)",
+        "cor": "#1D9BF0",
         "regex": r"^https?://(www\.|mobile\.)?(twitter|x)\.com/.+",
         "exemplo": "https://x.com/usuario/status/123456789",
     },
     "instagram": {
         "nome": "Instagram",
+        "cor": "#C13584",
         "regex": r"^https?://(www\.)?instagram\.com/.+",
         "exemplo": "https://www.instagram.com/reel/XXXXXXXXXXX/",
     },
 }
 
-COR_X = "#1D9BF0"
-COR_INSTA = "#C13584"
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
-class Interruptor(tk.Canvas):
-    """Interruptor: False = X (Twitter) | True = Instagram."""
+class Seletor(tk.Frame):
+    """Seletor segmentado: um botão por plataforma (apenas um ativo)."""
 
     def __init__(self, master, bg, command=None):
-        super().__init__(master, width=64, height=30, bg=bg, highlightthickness=0, bd=0)
-        self.estado = False
+        super().__init__(master, bg=bg)
         self.command = command
-        self.bind("<Button-1>", self.alternar)
-        self.configure(cursor="hand2")
+        self.valor = "youtube"
+        self.botoes = {}
+        for chave, p in PLATAFORMAS.items():
+            b = tk.Label(
+                self, text=p["nome"], font=("Segoe UI", 10, "bold"),
+                padx=16, pady=7, cursor="hand2", bd=1, relief="solid",
+            )
+            b.pack(side="left")
+            b.bind("<Button-1>", lambda _e, k=chave: self.escolher(k))
+            self.botoes[chave] = b
         self.desenhar()
 
-    def alternar(self, _event=None):
-        self.estado = not self.estado
+    def escolher(self, chave):
+        if chave == self.valor:
+            return
+        self.valor = chave
         self.desenhar()
         if self.command:
-            self.command(self.estado)
+            self.command(chave)
 
     def desenhar(self):
-        self.delete("all")
-        cor = COR_INSTA if self.estado else COR_X
-        self.create_oval(3, 3, 27, 27, fill=cor, outline=cor)
-        self.create_oval(37, 3, 61, 27, fill=cor, outline=cor)
-        self.create_rectangle(15, 3, 49, 27, fill=cor, outline=cor)
-        cx = 49 if self.estado else 15
-        self.create_oval(cx - 9, 6, cx + 9, 24, fill="white", outline="white")
+        for chave, b in self.botoes.items():
+            if chave == self.valor:
+                b.config(bg=PLATAFORMAS[chave]["cor"], fg="white")
+            else:
+                b.config(bg="#EDEDED", fg="#555555")
 
 
 class App:
@@ -60,7 +73,7 @@ class App:
         self.fila = queue.Queue()
         self.ocupado = False
 
-        root.title("Baixador de Vídeos - X e Instagram")
+        root.title("Baixador de Vídeos - YouTube, X e Instagram")
         root.geometry("560x330")
         root.resizable(False, False)
         bg = root.cget("bg")
@@ -68,15 +81,9 @@ class App:
         frame = ttk.Frame(root, padding=20)
         frame.pack(fill="both", expand=True)
 
-        # --- Interruptor ---
-        linha = ttk.Frame(frame)
-        linha.pack(pady=(0, 15))
-        self.lbl_x = tk.Label(linha, text="X (Twitter)", font=("Segoe UI", 11, "bold"), bg=bg)
-        self.lbl_x.pack(side="left", padx=10)
-        self.interruptor = Interruptor(linha, bg=bg, command=self.ao_trocar_plataforma)
-        self.interruptor.pack(side="left")
-        self.lbl_insta = tk.Label(linha, text="Instagram", font=("Segoe UI", 11), bg=bg)
-        self.lbl_insta.pack(side="left", padx=10)
+        # --- Seletor de plataforma ---
+        self.seletor = Seletor(frame, bg=bg)
+        self.seletor.pack(pady=(0, 15))
 
         # --- Link ---
         ttk.Label(frame, text="Link do vídeo:").pack(anchor="w")
@@ -108,11 +115,7 @@ class App:
 
     # ---------- Interface ----------
     def plataforma(self):
-        return "instagram" if self.interruptor.estado else "x"
-
-    def ao_trocar_plataforma(self, instagram):
-        self.lbl_x.config(font=("Segoe UI", 11, "normal" if instagram else "bold"))
-        self.lbl_insta.config(font=("Segoe UI", 11, "bold" if instagram else "normal"))
+        return self.seletor.valor
 
     def travar(self, travado):
         self.ocupado = travado
@@ -139,7 +142,12 @@ class App:
         threading.Thread(target=self.buscar_info, args=(url,), daemon=True).start()
 
     def opcoes_base(self):
-        opts = {"quiet": True, "no_warnings": True, "ffmpeg_location": FFMPEG}
+        opts = {
+            "quiet": True,
+            "no_warnings": True,
+            "ffmpeg_location": FFMPEG,
+            "noplaylist": True,
+        }
         nav = self.var_cookies.get()
         if nav != "Nenhum":
             opts["cookiesfrombrowser"] = (nav,)
@@ -251,6 +259,13 @@ class App:
                         dica = (
                             "\n\nDica: o Instagram costuma exigir login. Faça login no "
                             "navegador e escolha-o em 'Usar login do navegador'."
+                        )
+                    elif self.plataforma() == "youtube":
+                        dica = (
+                            "\n\nDica: se o YouTube pedir confirmação de que você não é um "
+                            "robô ou o vídeo for restrito, escolha seu navegador em "
+                            "'Usar login do navegador'. Se o erro citar 'JavaScript runtime', "
+                            "instale o Deno (https://deno.com) ou o Node.js e tente de novo."
                         )
                     messagebox.showerror("Erro", msg[1][:700] + dica)
         except queue.Empty:
