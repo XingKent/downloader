@@ -29,7 +29,7 @@ if not exist "%VENV%\Scripts\python.exe" (
 )
 
 REM 2) Instala as dependencias (apenas na primeira vez)
-if not exist "%VENV%\.deps_ok" (
+if not exist "%VENV%\.deps_v2" (
     echo Instalando dependencias, aguarde...
     "%VENV%\Scripts\python.exe" -m pip install --upgrade pip
     "%VENV%\Scripts\python.exe" -m pip install -r requirements.txt
@@ -38,7 +38,7 @@ if not exist "%VENV%\.deps_ok" (
         pause
         exit /b 1
     )
-    echo ok> "%VENV%\.deps_ok"
+    echo ok> "%VENV%\.deps_v2"
 )
 
 REM 3) Abre o programa (pythonw = sem janela de console)
